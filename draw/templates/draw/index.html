@@ -19,10 +19,14 @@
     <canvas id="myCanvas" width="750px" height="750px"></canvas>
 </body>
 <script>
+  
+  
     $(document).ready(()=>{
+        
        // setting up the canvas and one paper tool
     var canvas = document.getElementById('myCanvas');
     paper.setup(canvas);
+    var ctx = canvas.getContext('2d'); 
     var tool = new paper.Tool();
 
     // getting the URL (you may want to use for Exercise 3)
@@ -30,26 +34,56 @@
     
     // id and color functionality 
     var id = Math.floor(Math.random()*1000) + 1;
-    var colors = ['black', 'blue', 'red', 'green', 'yellow', 'pink', 'purple', 'orange', 'maroon'];  
-    var paths = {id: path};  
+    var colors = ['black', 'blue', 'red', 'green', 'yellow', 'pink', 'purple', 'orange', 'maroon', 'fuchsia', 'olive'];  
+    var paths = {};  
       
     // creating path for first user
-    var path = new paper.Path();
+    var path = new paper.Path();  
     var colorSelect = Math.floor((Math.random() * colors.length));  
     path.strokeColor = colors[colorSelect];
     path.strokeWidth = 3;  
+      
+      
+    // Exercise 2   
+    // mobile gestures
+    window.addEventListener('devicemotion',(event) => {
+      // added basic shake detection
+      if ((Math.abs(event.acceleration.x) > 25) && (Math.abs(event.acceleration.y) > 25)) {
+        // clearing small screen
+        if (!url.indexOf('?size=large') > -1){
+          path.removeSegments();  // removes the path stored
+        }
+        // clearing large screen
+        if (url.indexOf('?size=large') > -1){
+          path.removeSegments();  // removes the path stored
+          for (var i in paths){
+            paths[i].removeSegments();
+          }
+        }
+        
+      }
+      
+      
+    });
+      
+      
+    window.addEventListener('deviceorientation',(event) => {
+      if (event.gamma > 30) {
+        path.strokeColor = paper.Color.random();
+      }   
+    });  
     
     // mouse movement draw  
     tool.onMouseMove = function(event) {
-    // use when sending a message to the server
-    // to be broadcasted to all clients, please add a delay
-    path.add(event.point);  
+    // adding the point on the small screens  
+    if (!url.indexOf('?size=large') > -1 ){
+        path.add(event.point);
+    }   
     let message = {id: id, x: event.point.x, y: event.point.y, color: colorSelect};
-    
     setTimeout( () => { 
       socket.send(JSON.stringify(message));
-    }, 500);
-    }
+    }, 50);
+    };
   
     // create a new websocket connecting to the server
     var socket = new WebSocket('wss://p3-websockets-himanshuc71-hchotwani921366.codeanyapp.com/ws/draw');
@@ -60,7 +94,7 @@
        let m = JSON.parse(receivedMessage.data);
        let p = new paper.Point(m['x'],m['y']); 
        let color = colors[m['color']]; 
-
+         
        if (m['id'] in paths){
          paths[m['id']].add(p);
        }
@@ -76,14 +110,18 @@
       return;
     }  
     
-
-    
-
     // notify console if socket closes unexpectedly
     socket.onclose = function(e) {
      console.error('Socket closed unexpectedly');
     };
+      
+    
+      
     })
-   
+  
+  
+  
+    
+    
 </script>
 </html>
